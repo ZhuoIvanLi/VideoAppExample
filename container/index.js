@@ -10,10 +10,10 @@ const rawVideoElem = document.createElement("video");
 rawVideoElem.setAttribute("id", "rawVideo");
 // rawVideoElem.setAttribute("style", "display:none");
 document.getElementById("videoWrapper").appendChild(rawVideoElem);
+//document.getElementById("videoWrapper").innerHTML = startStreaming();
 
 const processedVideoElem = document.createElement("video");
 processedVideoElem.setAttribute("id", "processedVideo");
-// rawVideoElem.setAttribute("style", "display:none");
 document.getElementById("resultWrapper").appendChild(processedVideoElem);
 
 const previewCanvas = document.createElement("canvas");
@@ -43,8 +43,10 @@ function getResolution() {
 function initVideoPromise() {
   return new Promise(async function (resolve, reject) {
     let devices = await navigator.mediaDevices.enumerateDevices();
+    console.log("initial video promise*********************************************************")
     console.log(devices, devices[0].deviceId);
     const resolution = getResolution();
+
     const cameraStream = await window.navigator.mediaDevices.getUserMedia({
       audio: false,
       video: {
@@ -52,8 +54,8 @@ function initVideoPromise() {
         height: resolution[1],
       },
     });
-    processedVideoElem.srcObject = processedMediaStream;
 
+    processedVideoElem.srcObject = processedMediaStream;
     rawVideoElem.srcObject = cameraStream;
 
     rawVideoElem.onloadedmetadata = function () {
@@ -87,6 +89,7 @@ function getVideoFrame() {
     rawVideoElem.height
   );
 }
+
 let streamInited = false;
 async function startStreaming() {
   if (streamInited) {
@@ -105,12 +108,13 @@ async function sendNewVideoFrame() {
   startProfile("GetVideoFrame");
   const imageData = getVideoFrame();
   endProfile("GetVideoFrame");
+
   if (
     !sharedBuffer ||
     sharedBuffer.byteLength !== imageData.data.buffer.byteLength
   ) {
     delete sharedBuffer;
-    sharedBuffer = new SharedArrayBuffer(imageData.data.buffer.byteLength);
+    sharedBuffer = new ArrayBuffer(imageData.data.buffer.byteLength);
     sharedImageArray = new Uint8ClampedArray(sharedBuffer);
   }
 
@@ -120,7 +124,7 @@ async function sendNewVideoFrame() {
 
   endProfile("CopyToShareArray");
 
-  if (!sendToIframe) {
+  if (sendToIframe) {
     setTimeout(() => {
       startProfile("PostNewVideoFrame");
       videoFrameProcessed();
@@ -151,6 +155,22 @@ function sendEffectParameters(parameters) {
     "*"
   );
 }
+
+function convertImageDataToOpenCV(imageData) {
+  // convert to normal array
+  const normalArray = Array.from(imageData);
+  //nest the pixel channels
+  const channels = 4 //canvas pixels contain 4 elements: RGBA
+  const nestedChannelArray = _.chunk(normalArray, channels);
+  const nestedImageArray = _.chunk(nestedChannelArray, imageData.data.height);
+
+  //nestedImageArray is the correct shape to be converted to matrix. 
+  const RGBAmat = new cv.Mat(nestedImageArray, cv.CV_8UC4);
+
+  //openCV often defaults to BGR-type image matrix, so lets color convert the pixel order
+  return BGRAmat = RGBAmat.cvtColor(cv.COLOR_RGBA2BGRA);
+}
+
 function videoFrameProcessed() {
   endProfile("PostNewVideoFrame");
 
@@ -166,6 +186,20 @@ function videoFrameProcessed() {
 
     startProfile("DisplayProcessedFrame");
     let imageData = new ImageData(processedImageArr, rawVideoElem.videoWidth, rawVideoElem.videoHeight);
+    
+    let BGRAmatD = cv.matFromImageData(imageData) 
+    //cv.line(BGRAmatD, (0,0), (10,10), cv.Scalar(255), 1, 8, 0); 
+    //const BGRAmatCV = convertImageDataToOpenCV(imageData);
+
+    //console.log("size: " + BGRAmatD)
+
+    // Add methods to change the video frame
+    for (let i = 1; i < imageData.data.length; i += 4) {
+      //smaple effect just change the value to 100, which effect some pixel value of video frame
+      imageData.data[i + 1] = 100;
+    }
+
+
     previewCanvasCtx.putImageData(imageData, 0, 0);
     writeText(previewCanvas, "After process");
     endProfile("DisplayProcessedFrame");

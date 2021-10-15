@@ -12,16 +12,17 @@ let appliedEffect = {
 let uiSelectedEffect = {};
 
 let errorOccurs = false;
+
 //Sample video effect
 function videoFrameHandler(videoFrame, notifyVideoProcessed, notifyError) {
-  const maxLen =
-    (videoFrame.height * videoFrame.width) /
-      Math.max(1, appliedEffect.proportion) - 4;
+  const maxLen = (videoFrame.height * videoFrame.width) / Math.max(1, appliedEffect.proportion) - 4;
 
+  // Add methods to change the video frame
   for (let i = 1; i < maxLen; i += 4) {
     //smaple effect just change the value to 100, which effect some pixel value of video frame
     videoFrame.data[i + 1] = appliedEffect.pixelValue;
   }
+
 
   //send notification the effect processing is finshed.
   notifyVideoProcessed();

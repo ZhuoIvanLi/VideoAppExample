@@ -27,6 +27,7 @@ const measureStat = {};
 function startProfile(name) {
   performance.mark("B:" + name);
 }
+
 function endProfile(name) {
   performance.mark("E:" + name);
   const measure = performance.measure(name, "B:" + name, "E:" + name);
@@ -50,13 +51,13 @@ setInterval(() => {
     measureStat[key]["avg"] = arr.mean(measures[key]);
     console.log(key, measureStat[key]);
   }
-  if (
-    document.getElementById("handle_duration") &&
-    measureStat["HandleFrame"]
-  ) {
+
+  if (document.getElementById("handle_duration") && measureStat["HandleFrame"]) {
+
     document.getElementById("handle_duration").innerHTML = parseFloat(
       measureStat["HandleFrame"]["avg"]
     ).toFixed(4);
   }
+
   console.log("-------------------------------------------------");
 }, 1000);
